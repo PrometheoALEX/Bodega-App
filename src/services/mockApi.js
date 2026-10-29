@@ -50,32 +50,25 @@ export async function loginUsuario({ usuario, password }) {
       password: password,
     });
 
-    return {
-      success: true,
-      data: response.data,
-    };
-  } catch (error) {
-    const usuarioEncontrado = usuarios.find(
-      (item) => item.usuario === usuario && item.password === password,
-    );
-
-    if (!usuarioEncontrado) {
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Usuario o contraseña incorrectos.',
-      };
-    }
+    // Normalizamos la respuesta para que el frontend reciba "nombre" y "usuario" sin importar cómo los mande Java
+    const userData = response.data?.user || response.data?.usuario || response.data;
 
     return {
       success: true,
       data: {
-        token: 'mock-token-123',
+        token: response.data.token || 'mock-token-123',
         usuario: {
-          id: usuarioEncontrado.id,
-          nombre: usuarioEncontrado.nombre,
-          usuario: usuarioEncontrado.usuario,
+          id: userData.id,
+          nombre: userData.firstName || userData.nombre || 'Usuario',
+          apellido: userData.lastName || userData.apellido || '',
+          usuario: userData.email || userData.username || usuario,
         },
       },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.response?.data?.message || 'Usuario o contraseña incorrectos.',
     };
   }
 }
