@@ -13,14 +13,27 @@ const categoriasIniciales = [
   'Accesorios',
 ];
 
-function normalizarProducto(producto) {
+function normalizarProducto(producto, categoriasDisponibles = []) {
   const name = producto.name ?? producto.nombre ?? '';
   const price = Number(producto.price ?? producto.precio);
-  const image = producto.image ?? producto.imagen ?? '';
+  const image = producto.image ?? producto.imageUrl ?? producto.image_url ?? producto.imagen ?? '';
   const categoryValue = producto.category ?? producto.categoria ?? producto.categoryId ?? '';
-  const category = typeof categoryValue === 'object'
+  const categoryName = typeof categoryValue === 'object' && categoryValue !== null
     ? categoryValue.name ?? categoryValue.nombre ?? ''
     : categoryValue;
+  const categoryId = typeof categoryValue === 'object' && categoryValue !== null
+    ? categoryValue.id ?? categoryValue.categoryId ?? categoryValue.category_id
+    : categoryName;
+  const isCategoryId = typeof categoryId === 'number' ||
+    (typeof categoryId === 'string' && /^\d+$/.test(categoryId));
+  const matchingCategory = isCategoryId
+    ? categoriasDisponibles.find((categoria) =>
+        String(categoria.id ?? categoria.categoryId ?? categoria.category_id) === String(categoryId),
+      )
+    : null;
+  const category = isCategoryId
+    ? matchingCategory?.name ?? matchingCategory?.nombre ?? ''
+    : categoryName;
   const description = producto.description ?? producto.descripcion ?? '';
 
   return {
@@ -63,20 +76,24 @@ function Catalogo({
     async function cargarDatos() {
       try {
         setCargandoProductos(true);
-        const respuestaProductos = await obtenerProductos();
+        const [respuestaProductos, respuestaCategorias] = await Promise.all([
+          obtenerProductos(),
+          obtenerCategorias(),
+        ]);
 
         if (!activo) return;
 
         if (respuestaProductos.success) {
-          setProductos(respuestaProductos.data.map(normalizarProducto));
+          const categoriasDisponibles = respuestaCategorias.success
+            ? respuestaCategorias.data
+            : [];
+          setProductos(respuestaProductos.data.map((producto) =>
+            normalizarProducto(producto, categoriasDisponibles),
+          ));
           setErrorProductos("");
         } else {
           setErrorProductos(respuestaProductos.message || 'No se pudieron cargar los productos.');
         }
-
-        // Cargar categorías desde el servidor
-        const respuestaCategorias = await obtenerCategorias();
-        if (!activo) return;
 
         if (respuestaCategorias.success && respuestaCategorias.data.length > 0) {
           const nombresCats = respuestaCategorias.data.map(c => c.name || c.nombre || c);
@@ -262,9 +279,11 @@ function Catalogo({
                 return (
                   <div className="producto" key={prod.id}>
                     <img src={prod.image} alt={prod.name} />
-                    <p>{prod.category}</p>
+                    {prod.category && <p>{prod.category}</p>}
                     <h3>{prod.name}</h3>
-                    {prod.description && <p>{prod.description}</p>}
+                    {prod.description && (
+                      <p className="producto-descripcion">{prod.description}</p>
+                    )}
                     <p>S/ {prod.price.toFixed(2)}</p>
                     <div className="producto-controles">
                       <button

@@ -2551,6 +2551,12 @@ button:not(.home-explore-button):focus-visible::after {
   font-weight: 750;
 }
 
+.producto p.producto-descripcion {
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 400;
+}
+
 .cantidad-boton,
 .carrito-item-controles > button {
   min-width: 38px;
