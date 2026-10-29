@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { obtenerProductos } from '../services/mockApi.js';
+import { obtenerProductos, obtenerCategorias } from '../services/mockApi.js';
 
-const categorias = [
+const categoriasIniciales = [
   'Todos los productos',
   'Laptops',
   'Almacenamiento',
@@ -13,6 +13,31 @@ const categorias = [
   'Accesorios',
 ];
 
+function normalizarProducto(producto) {
+  const name = producto.name ?? producto.nombre ?? '';
+  const price = Number(producto.price ?? producto.precio);
+  const image = producto.image ?? producto.imagen ?? '';
+  const categoryValue = producto.category ?? producto.categoria ?? producto.categoryId ?? '';
+  const category = typeof categoryValue === 'object'
+    ? categoryValue.name ?? categoryValue.nombre ?? ''
+    : categoryValue;
+  const description = producto.description ?? producto.descripcion ?? '';
+
+  return {
+    ...producto,
+    name,
+    price,
+    image,
+    category,
+    description,
+    // El carrito aún consume estos nombres; se mantienen mientras se migra esa pantalla.
+    nombre: name,
+    precio: price,
+    imagen: image,
+    categoria: category,
+  };
+}
+
 function Catalogo({
   volverAHome,
   irACarrito,
@@ -22,10 +47,11 @@ function Catalogo({
   usuarioActual,
 }) {
   const [productos, setProductos] = useState([]);
+  const [categorias, setCategorias] = useState(categoriasIniciales);
   const [precioMin, setPrecioMin] = useState("");
   const [precioMax, setPrecioMax] = useState("");
   const [ordenPrecio, setOrdenPrecio] = useState("");
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(categorias[0]);
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('Todos los productos');
   const [emailNewsletter, setEmailNewsletter] = useState("");
   const [mensajeNewsletter, setMensajeNewsletter] = useState("");
   const [cargandoProductos, setCargandoProductos] = useState(true);
@@ -34,22 +60,31 @@ function Catalogo({
   useEffect(() => {
     let activo = true;
 
-    async function cargarProductos() {
+    async function cargarDatos() {
       try {
         setCargandoProductos(true);
-        const respuesta = await obtenerProductos();
+        const respuestaProductos = await obtenerProductos();
 
         if (!activo) return;
 
-        if (respuesta.success) {
-          setProductos(respuesta.data);
+        if (respuestaProductos.success) {
+          setProductos(respuestaProductos.data.map(normalizarProducto));
           setErrorProductos("");
         } else {
-          setErrorProductos(respuesta.message || 'No se pudieron cargar los productos.');
+          setErrorProductos(respuestaProductos.message || 'No se pudieron cargar los productos.');
+        }
+
+        // Cargar categorías desde el servidor
+        const respuestaCategorias = await obtenerCategorias();
+        if (!activo) return;
+
+        if (respuestaCategorias.success && respuestaCategorias.data.length > 0) {
+          const nombresCats = respuestaCategorias.data.map(c => c.name || c.nombre || c);
+          setCategorias(['Todos los productos', ...nombresCats]);
         }
       } catch {
         if (activo) {
-          setErrorProductos('Ocurrió un error al cargar los productos.');
+          setErrorProductos('Ocurrió un error al cargar los datos.');
         }
       } finally {
         if (activo) {
@@ -58,7 +93,7 @@ function Catalogo({
       }
     }
 
-    cargarProductos();
+    cargarDatos();
 
     return () => {
       activo = false;
@@ -68,20 +103,20 @@ function Catalogo({
   const minimo = precioMin === "" ? null : Number(precioMin);
   const maximo = precioMax === "" ? null : Number(precioMax);
   const rangoInvalido = minimo !== null && maximo !== null && minimo > maximo;
-  const productosDeCategoria = categoriaSeleccionada === categorias[0]
+  const productosDeCategoria = categoriaSeleccionada === 'Todos los productos'
     ? productos
-    : productos.filter((producto) => producto.categoria === categoriaSeleccionada);
+    : productos.filter((producto) => producto.category === categoriaSeleccionada);
   const productosFiltrados = rangoInvalido
     ? []
     : productosDeCategoria.filter((producto) =>
-        (minimo === null || producto.precio >= minimo) &&
-        (maximo === null || producto.precio <= maximo),
+        (minimo === null || producto.price >= minimo) &&
+        (maximo === null || producto.price <= maximo),
       );
   const productosOrdenados = [...productosFiltrados].sort((a, b) =>
     ordenPrecio === "ascendente"
-      ? a.precio - b.precio
+      ? a.price - b.price
       : ordenPrecio === "descendente"
-        ? b.precio - a.precio
+        ? b.price - a.price
         : 0,
   );
 
@@ -143,7 +178,7 @@ function Catalogo({
             {categorias.map((categoria) => {
               const cantidad = categoria === categorias[0]
                 ? productos.length
-                : productos.filter((producto) => producto.categoria === categoria).length;
+                : productos.filter((producto) => producto.category === categoria).length;
 
               return (
                 <button
@@ -226,15 +261,17 @@ function Catalogo({
 
                 return (
                   <div className="producto" key={prod.id}>
-                    <img src={prod.imagen} alt={prod.nombre} />
-                    <h3>{prod.nombre}</h3>
-                    <p>S/ {prod.precio.toFixed(2)}</p>
+                    <img src={prod.image} alt={prod.name} />
+                    <p>{prod.category}</p>
+                    <h3>{prod.name}</h3>
+                    {prod.description && <p>{prod.description}</p>}
+                    <p>S/ {prod.price.toFixed(2)}</p>
                     <div className="producto-controles">
                       <button
                         type="button"
                         className="cantidad-boton"
                         onClick={() => disminuirCantidad(prod)}
-                        aria-label={`Quitar una unidad de ${prod.nombre}`}
+                        aria-label={`Quitar una unidad de ${prod.name}`}
                       >
                         -
                       </button>
@@ -243,7 +280,7 @@ function Catalogo({
                         type="button"
                         className="cantidad-boton"
                         onClick={() => aumentarCantidad(prod)}
-                        aria-label={`Agregar una unidad de ${prod.nombre}`}
+                        aria-label={`Agregar una unidad de ${prod.name}`}
                       >
                         +
                       </button>

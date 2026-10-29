@@ -32,14 +32,20 @@ function App() {
     return respuesta;
   }
 
-  async function manejarRegistro({ nombre, usuario, password }) {
-    const respuesta = await registrarUsuario({ nombre, usuario, password });
+  async function manejarRegistro(datosUsuario) {
+    const respuesta = await registrarUsuario(datosUsuario);
 
     if (!respuesta.success) {
       throw new Error(respuesta.message);
     }
 
-    setUsuarioActual(respuesta.data.usuario.nombre);
+    const usuarioRegistrado = respuesta.data.usuario;
+    const nombreUsuario = [
+      usuarioRegistrado.firstName,
+      usuarioRegistrado.lastName,
+    ].filter(Boolean).join(" ") || usuarioRegistrado.nombre || datosUsuario.email;
+
+    setUsuarioActual(nombreUsuario);
     return respuesta;
   }
 
