@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { obtenerProductos, obtenerCategorias } from '../services/mockApi.js';
 
-
+const categoriasIniciales = ['Todos los productos'];
 
 function normalizarProducto(producto) {
   const name = producto.name ?? producto.nombre ?? '';
