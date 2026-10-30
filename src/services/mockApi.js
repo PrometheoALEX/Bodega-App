@@ -9,8 +9,6 @@ const usuarios = [
   },
 ];
 
-
-
 export async function obtenerProductos() {
   try {
     const response = await axiosClient.get('/products');
@@ -50,7 +48,6 @@ export async function loginUsuario({ usuario, password }) {
       password: password,
     });
 
-    // Normalizamos la respuesta para que el frontend reciba "nombre" y "usuario" sin importar cómo los mande Java
     const userData = response.data?.user || response.data?.usuario || response.data;
 
     return {
@@ -72,7 +69,6 @@ export async function loginUsuario({ usuario, password }) {
     };
   }
 }
-
 
 export async function registrarUsuario(formData) {
   try {
