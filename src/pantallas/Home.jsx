@@ -52,7 +52,7 @@ function Home({ irACatalogo, irALogin, usuarioActual }) {
   return (
     <main className="home">
       <header className="home-nav">
-        <a className="home-brand" href="/" aria-label="Tech Point, inicio">
+        <a className="home-brand" href="/" aria-label="techPoint, inicio">
           <span className="home-brand-mark" aria-hidden="true">
             <svg viewBox="0 0 40 40" fill="none">
               <rect x="5" y="5" width="30" height="30" rx="10" />
@@ -61,7 +61,7 @@ function Home({ irACatalogo, irALogin, usuarioActual }) {
             </svg>
           </span>
           <span className="home-brand-copy">
-            <strong>tech point</strong>
+            <strong>techPoint</strong>
             <small>TECNOLOGÍA PARA TI</small>
           </span>
         </a>

@@ -1,20 +1,61 @@
 import { useEffect, useState } from 'react';
 import { obtenerProductos, obtenerCategorias } from '../services/mockApi.js';
 
-const categoriasIniciales = ['Todos los productos'];
+const categoriaTodos = { id: null, name: 'Todos los productos' };
 
-function normalizarProducto(producto) {
+function normalizarCategoria(categoria, indice) {
+  if (typeof categoria === 'string') {
+    return { id: categoria, name: categoria };
+  }
+
+  const id = String(categoria.id ?? categoria.categoryId ?? '');
+  const nombresCorregidosPorId = {
+    '6': 'Periféricos',
+    '7': 'Refrigeración',
+    '8': 'Accesorios',
+  };
+  const name = nombresCorregidosPorId[id] ?? categoria.name
+    ?? categoria.nombre
+    ?? categoria.categoryName
+    ?? categoria.nombreCategoria
+    ?? `Categoría ${indice + 1}`;
+
+  return {
+    id: id || name,
+    name,
+  };
+}
+
+function normalizarProducto(producto, categorias) {
   const name = producto.name ?? producto.nombre ?? '';
   const price = Number(producto.price ?? producto.precio);
   const image = producto.image ?? producto.imagen ?? '';
-  const categoryValue = producto.category ?? producto.categoria ?? producto.categoryId ?? '';
-  const category = typeof categoryValue === 'object'
-    ? categoryValue.name ?? categoryValue.nombre ?? ''
-    : categoryValue;
+  const categoryValue = producto.category ?? producto.categoria ?? '';
+  const categoryObject = typeof categoryValue === 'object' && categoryValue !== null
+    ? categoryValue
+    : null;
+  const rawCategoryId = producto.categoryId
+    ?? producto.category_id
+    ?? categoryObject?.id
+    ?? (typeof categoryValue === 'number' ? categoryValue : null);
+  const rawCategoryName = categoryObject?.name
+    ?? categoryObject?.nombre
+    ?? categoryObject?.categoryName
+    ?? (typeof categoryValue === 'string' ? categoryValue : null);
+  const categoriaRelacionada = categorias.find((categoria) =>
+    (rawCategoryId !== null && categoria.id === String(rawCategoryId)) ||
+    (rawCategoryName !== null && categoria.name === rawCategoryName),
+  );
+  const category = categoriaRelacionada?.name
+    ?? rawCategoryName
+    ?? (rawCategoryId !== null ? `Categoría ${rawCategoryId}` : '');
+  const categoryId = categoriaRelacionada?.id
+    ?? (rawCategoryId !== null ? String(rawCategoryId) : category || null);
   const description = producto.description ?? producto.descripcion ?? '';
 
   return {
     ...producto,
+    categoryId,
     name,
     price,
     image,
@@ -37,11 +78,11 @@ function Catalogo({
   usuarioActual,
 }) {
   const [productos, setProductos] = useState([]);
-  const [categorias, setCategorias] = useState(categoriasIniciales);
+  const [categorias, setCategorias] = useState([categoriaTodos]);
   const [precioMin, setPrecioMin] = useState("");
   const [precioMax, setPrecioMax] = useState("");
   const [ordenPrecio, setOrdenPrecio] = useState("");
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState('Todos los productos');
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState(null);
   const [emailNewsletter, setEmailNewsletter] = useState("");
   const [mensajeNewsletter, setMensajeNewsletter] = useState("");
   const [cargandoProductos, setCargandoProductos] = useState(true);
@@ -53,25 +94,38 @@ function Catalogo({
     async function cargarDatos() {
       try {
         setCargandoProductos(true);
-        const respuestaProductos = await obtenerProductos();
+        const [respuestaProductos, respuestaCategorias] = await Promise.all([
+          obtenerProductos(),
+          obtenerCategorias(),
+        ]);
 
         if (!activo) return;
 
-        if (respuestaProductos.success) {
-          setProductos(respuestaProductos.data.map(normalizarProducto));
-          setErrorProductos("");
-        } else {
+        if (!respuestaProductos.success) {
           setErrorProductos(respuestaProductos.message || 'No se pudieron cargar los productos.');
+          return;
         }
 
-        // Cargar categorías desde el servidor
-        const respuestaCategorias = await obtenerCategorias();
-        if (!activo) return;
+        const categoriasServidor = respuestaCategorias.success
+          ? respuestaCategorias.data.map(normalizarCategoria)
+          : [];
+        const categoriasDisponibles = categoriasServidor.length > 0
+          ? categoriasServidor
+          : [...new Set(respuestaProductos.data.map((producto) => {
+              const categoria = producto.category ?? producto.categoria;
+              if (typeof categoria === 'object' && categoria !== null) {
+                return categoria.name ?? categoria.nombre ?? categoria.categoryName;
+              }
+              return categoria ?? producto.categoryId ?? producto.category_id;
+            }).filter((categoria) => categoria !== undefined && categoria !== null && categoria !== ''))]
+              .map((categoria, indice) => normalizarCategoria(categoria, indice));
 
-        if (respuestaCategorias.success && respuestaCategorias.data.length > 0) {
-          const nombresCats = respuestaCategorias.data.map(c => c.name || c.nombre || c);
-          setCategorias(['Todos los productos', ...nombresCats]);
-        }
+        const productosNormalizados = respuestaProductos.data.map((producto) =>
+          normalizarProducto(producto, categoriasDisponibles),
+        );
+        setProductos(productosNormalizados);
+        setCategorias([categoriaTodos, ...categoriasDisponibles]);
+        setErrorProductos("");
       } catch {
         if (activo) {
           setErrorProductos('Ocurrió un error al cargar los datos.');
@@ -93,9 +147,9 @@ function Catalogo({
   const minimo = precioMin === "" ? null : Number(precioMin);
   const maximo = precioMax === "" ? null : Number(precioMax);
   const rangoInvalido = minimo !== null && maximo !== null && minimo > maximo;
-  const productosDeCategoria = categoriaSeleccionada === 'Todos los productos'
+  const productosDeCategoria = categoriaSeleccionada === null
     ? productos
-    : productos.filter((producto) => producto.category === categoriaSeleccionada);
+    : productos.filter((producto) => producto.categoryId === categoriaSeleccionada);
   const productosFiltrados = rangoInvalido
     ? []
     : productosDeCategoria.filter((producto) =>
@@ -149,7 +203,7 @@ function Catalogo({
       </div>
 
       <header className="catalogo-header">
-        <h1>Tech Point</h1>
+        <h1>techPoint</h1>
         <p className="catalogo-bienvenida">
           <span className="catalogo-avatar" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none">
@@ -166,19 +220,19 @@ function Catalogo({
           <h2>Categorías</h2>
           <nav aria-label="Categorías de productos">
             {categorias.map((categoria) => {
-              const cantidad = categoria === categorias[0]
+              const cantidad = categoria.id === null
                 ? productos.length
-                : productos.filter((producto) => producto.category === categoria).length;
+                : productos.filter((producto) => producto.categoryId === categoria.id).length;
 
               return (
                 <button
                   type="button"
-                  key={categoria}
-                  className={categoriaSeleccionada === categoria ? 'categoria-boton seleccionado' : 'categoria-boton'}
-                  onClick={() => setCategoriaSeleccionada(categoria)}
-                  aria-pressed={categoriaSeleccionada === categoria}
+                  key={categoria.id ?? 'todos'}
+                  className={categoriaSeleccionada === categoria.id ? 'categoria-boton seleccionado' : 'categoria-boton'}
+                  onClick={() => setCategoriaSeleccionada(categoria.id)}
+                  aria-pressed={categoriaSeleccionada === categoria.id}
                 >
-                  <span>{categoria}</span>
+                  <span>{categoria.name}</span>
                   <span className="categoria-cantidad">{cantidad}</span>
                 </button>
               );
@@ -229,7 +283,7 @@ function Catalogo({
           </div>
 
           <div className="catalogo-resultados">
-            <h2>{categoriaSeleccionada}</h2>
+            <h2>{categorias.find((categoria) => categoria.id === categoriaSeleccionada)?.name ?? categoriaTodos.name}</h2>
             {!cargandoProductos && !errorProductos && (
               <span>{productosFiltrados.length} productos</span>
             )}
@@ -290,7 +344,7 @@ function Catalogo({
       <footer className="catalogo-footer">
         <div>
           <h2>Recibe nuestras ofertas</h2>
-          <p>Suscríbete al newsletter de Tech Point.</p>
+          <p>Suscríbete al newsletter de techPoint.</p>
         </div>
         <form className="newsletter-form" onSubmit={manejarNewsletter}>
           <label htmlFor="newsletter-email">Correo electrónico</label>

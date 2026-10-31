@@ -63,7 +63,7 @@ function Carrito({
 
         <div className="carrito-acciones">
           <button type="button" onClick={volverATienda}>
-            Volver a Tech Point
+            Volver a techPoint
           </button>
           <button
             type="button"

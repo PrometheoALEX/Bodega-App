@@ -67,7 +67,7 @@ function MetodoPago({ total, volverAlCarrito, volverATienda, confirmarCompra }) 
               Tu pedido de S/ {totalConfirmado.toFixed(2)} se registró con {metodoSeleccionado}.
             </p>
             <button className="metodo-pago-continuar" type="button" onClick={volverATienda}>
-              Volver a Tech Point
+              Volver a techPoint
             </button>
           </div>
         ) : (
@@ -105,7 +105,7 @@ function MetodoPago({ total, volverAlCarrito, volverATienda, confirmarCompra }) 
                 Volver al Carrito
               </button>
               <button className="volver-tienda" type="button" onClick={volverATienda}>
-                Volver a Tech Point
+                Volver a techPoint
               </button>
               <button
                 className="metodo-pago-continuar"

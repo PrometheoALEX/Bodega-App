@@ -13,6 +13,7 @@ import "./App.css";
 function App() {
   const [pantallaActual, setPantallaActual] = useState("home");
   const [destinoAuth, setDestinoAuth] = useState("home");
+  const [pantallaAnteriorRegistro, setPantallaAnteriorRegistro] = useState("home");
   const [carrito, setCarrito] = useState([]);
   const [usuarioActual, setUsuarioActual] = useState("Invitado");
 
@@ -20,6 +21,12 @@ function App() {
     setDestinoAuth(destino);
     setPantallaActual("login");
   }
+
+  function abrirCrearCuenta() {
+    setPantallaAnteriorRegistro(pantallaActual);
+    setPantallaActual("crearCuenta");
+  }
+
 
   async function manejarLogin({ usuario, password }) {
     const respuesta = await loginUsuario({ usuario, password });
@@ -31,6 +38,8 @@ function App() {
     setUsuarioActual(respuesta.data.usuario.nombre);
     return respuesta;
   }
+
+
 
   async function manejarRegistro(datosUsuario) {
     const respuesta = await registrarUsuario(datosUsuario);
@@ -48,6 +57,9 @@ function App() {
     setUsuarioActual(nombreUsuario);
     return respuesta;
   }
+
+
+
 
   function aumentarCantidad(producto) {
     setCarrito((productosActuales) => {
@@ -67,6 +79,8 @@ function App() {
     });
   }
 
+
+  
   function disminuirCantidad(producto) {
     setCarrito((productosActuales) =>
       productosActuales
@@ -134,7 +148,7 @@ function App() {
       {pantallaActual === "login" && (
         <Login
           irAMetodoPago={continuarTrasAutenticacion}
-          irACrearCuenta={() => setPantallaActual("crearCuenta")}
+          irACrearCuenta={abrirCrearCuenta}
           volver={() => setPantallaActual(destinoAuth)}
           textoVolver={destinoAuth === "home" ? "Volver a Home" : "Volver a opciones"}
           onLogin={manejarLogin}
@@ -145,8 +159,7 @@ function App() {
         <CrearCuenta
           irALogin={() => setPantallaActual("login")}
           irAMetodoPago={continuarTrasAutenticacion}
-          volver={() => setPantallaActual(destinoAuth)}
-          textoVolver={destinoAuth === "home" ? "Volver a Home" : "Volver a opciones"}
+          volver={() => setPantallaActual(pantallaAnteriorRegistro)}
           onRegister={manejarRegistro}
         />
       )}
@@ -189,7 +202,7 @@ function App() {
         <AccesoCheckout
           productos={carrito}
           irALogin={() => abrirLogin("accesoCheckout")}
-          irACrearCuenta={() => setPantallaActual("crearCuenta")}
+          irACrearCuenta={abrirCrearCuenta}
           volverAlCarrito={() => setPantallaActual("carrito")}
         />
       )}

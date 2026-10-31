@@ -1,26 +1,47 @@
 import axiosClient from './axiosClient';
 
-const usuarios = [
-  {
-    id: 1,
-    nombre: 'María López',
-    usuario: 'maria',
-    password: '123456',
-  },
-];
+function extraerLista(data, claves) {
+  if (Array.isArray(data)) return data;
+  if (!data || typeof data !== 'object') return null;
+
+  for (const clave of claves) {
+    if (Array.isArray(data[clave])) return data[clave];
+  }
+
+  if (Array.isArray(data.content)) return data.content;
+  if (Array.isArray(data.data)) return data.data;
+
+  if (data._embedded && typeof data._embedded === 'object') {
+    const listaAnidada = Object.values(data._embedded).find(Array.isArray);
+    if (listaAnidada) return listaAnidada;
+  }
+
+  return null;
+}
 
 export async function obtenerProductos() {
   try {
     const response = await axiosClient.get('/products');
+    const productos = extraerLista(response.data, ['products', 'productos']);
+
+    if (!productos) {
+      return {
+        success: false,
+        data: [],
+        message: 'El servidor no devolvió una lista válida de productos.',
+      };
+    }
+
     return {
       success: true,
-      data: response.data,
+      data: productos,
     };
   } catch (error) {
     console.error("Error al obtener productos del backend:", error);
     return {
-      success: true,
-      data: productosMock,
+      success: false,
+      data: [],
+      message: error.response?.data?.message || 'No se pudieron cargar los productos del servidor.',
     };
   }
 }
@@ -28,9 +49,19 @@ export async function obtenerProductos() {
 export async function obtenerCategorias() {
   try {
     const response = await axiosClient.get('/categories');
+    const categorias = extraerLista(response.data, ['categories', 'categorias']);
+
+    if (!categorias) {
+      return {
+        success: false,
+        data: [],
+        message: 'El servidor no devolvió una lista válida de categorías.',
+      };
+    }
+
     return {
       success: true,
-      data: response.data,
+      data: categorias,
     };
   } catch (error) {
     console.error("Error al obtener categorías del backend:", error);

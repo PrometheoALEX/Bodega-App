@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-function CrearCuenta({ irAMetodoPago, irALogin, volverAlCheckout, onRegister }) {
+function CrearCuenta({ irAMetodoPago, irALogin, volver, onRegister }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [dni, setDni] = useState("");
@@ -168,10 +168,10 @@ async function manejarEnvio(e) {
             <button
               type="button"
               className="checkout-access-back"
-              onClick={volverAlCheckout}
+              onClick={volver}
               style={{ padding: '4px', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: '#475569', textDecoration: 'underline' }}
             >
-              Volver a opciones
+              Volver
             </button>
           </div>
         </form>
